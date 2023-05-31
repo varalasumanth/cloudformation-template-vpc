@@ -1,0 +1,105 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: vpc creation by sumanth varala
+Resources:
+  sumanthVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.31.0.0/16
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+       - Key: Name
+         Value: sumanthVPC
+  publicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: sumanthVPC
+      CidrBlock: 172.31.0.0/24
+      AvailabilityZone: "ap-south-1a"
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+      - Key: Name
+        Value: publicSubnet
+  privateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: sumanthVPC
+      CidrBlock: 172.31.1.0/24
+      AvailabilityZone: "ap-south-1a"
+      Tags:
+      - Key: Name
+        Value: privateSubnet
+  sumanthInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: sumanthInternetGateway
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+         Ref: sumanthVPC
+      InternetGatewayId:
+         Ref: sumanthInternetGateway
+
+  sumanthRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:  
+        Ref: sumanthVPC
+      Tags:
+      - Key: Name
+        Value: sumanthRouteTable
+  publicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: publicSubnet
+      RouteTableId:
+        Ref: sumanthRouteTable
+  sumanthRoute:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId:
+         Ref: sumanthRouteTable
+       DestinationCidrBlock: 0.0.0.0/0
+       GatewayId:
+         Ref: sumanthInternetGateway
+  sumanthpvtRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:  
+        Ref: sumanthVPC
+      Tags:
+      - Key: Name
+        Value: sumanthpvtRouteTable
+  pvtSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: privateSubnet
+      RouteTableId:
+        Ref: sumanthpvtRouteTable
+  NATGateway:
+     Type: AWS::EC2::NatGateway
+     Properties:
+      AllocationId: !GetAtt NATGatewayEIP.AllocationId
+      SubnetId: !Ref privateSubnet
+      Tags:
+      - Key: Name
+        Value: NATGateway
+  NATGatewayEIP:
+     Type: AWS::EC2::EIP
+     Properties:
+        Domain: vpc
+  RouteNATGateway:
+     DependsOn: NATGateway
+     Type: AWS::EC2::Route
+     Properties:
+        RouteTableId: !Ref sumanthpvtRouteTable
+        DestinationCidrBlock: '0.0.0.0/0'
+        NatGatewayId: !Ref NATGateway
+
